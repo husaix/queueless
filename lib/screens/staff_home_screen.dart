@@ -127,7 +127,7 @@ class StaffHomeScreen extends StatelessWidget {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text(
-                                    'Calling Ticket #${calledTicket.ticketCode} to counter!',
+                                    'Calling Ticket #${calledTicket.ticketCode} (${calledTicket.userName}) to counter!',
                                   ),
                                   backgroundColor: primaryColor,
                                   behavior: SnackBarBehavior.floating,
@@ -139,9 +139,9 @@ class StaffHomeScreen extends StatelessWidget {
                     label: Text(
                       waitingList.isEmpty
                           ? 'Queue is Empty'
-                          : 'Call Next Ticket (${waitingList.first.ticketCode})',
+                          : 'Call Next: ${waitingList.first.ticketCode} (${waitingList.first.userName})',
                       style: const TextStyle(
-                        fontSize: 16,
+                        fontSize: 15,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -352,13 +352,18 @@ class _CalledTicketCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Called to Counter',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                      color: Colors.green,
-                    ),
+                  Row(
+                    children: [
+                      const Icon(Icons.person, size: 16, color: Colors.black87),
+                      const SizedBox(width: 4),
+                      Text(
+                        ticket.userName,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 2),
                   LiveWaitTimer(
@@ -428,19 +433,40 @@ class _WaitingTicketCard extends StatelessWidget {
             ),
             const SizedBox(width: 12),
 
-            // Ticket Number & Timer
+            // Ticket Number, User Name & Timer
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Ticket ${ticket.ticketCode}',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  Row(
+                    children: [
+                      Text(
+                        'Ticket ${ticket.ticketCode}',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.shade50,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          ticket.userName,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.blue.shade900,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 4),
                   Row(
                     children: [
                       const Icon(Icons.timer_outlined,

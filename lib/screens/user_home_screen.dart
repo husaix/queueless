@@ -19,12 +19,12 @@ class UserHomeScreen extends StatelessWidget {
 
         return Scaffold(
           appBar: AppBar(
-            title: const Text('QueueLess – User'),
+            title: const Text('QueueLess – User Portal'),
             centerTitle: true,
             elevation: 0,
             leading: IconButton(
               icon: const Icon(Icons.home_outlined),
-              tooltip: 'Back to Portals',
+              tooltip: 'Return to Homepage',
               onPressed: () {
                 Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(builder: (_) => const LoginScreen()),
@@ -49,9 +49,79 @@ class UserHomeScreen extends StatelessWidget {
   }
 }
 
-/// Department Selection View - Displays Café and Administration Office
-class _SelectDepartmentView extends StatelessWidget {
+/// Department Selection View - First page where user enters name and selects a department
+class _SelectDepartmentView extends StatefulWidget {
   const _SelectDepartmentView();
+
+  @override
+  State<_SelectDepartmentView> createState() => _SelectDepartmentViewState();
+}
+
+class _SelectDepartmentViewState extends State<_SelectDepartmentView> {
+  final TextEditingController _nameController = TextEditingController();
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  void _generateTicket(String departmentId) {
+    final nameInput = _nameController.text.trim();
+
+    // MUST require name before generating a ticket
+    if (nameInput.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.white),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text('Name is required! Please enter your name first.'),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.red.shade700,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
+      return;
+    }
+
+    final service = context.read<QueueService>();
+    final newTicket = service.joinQueue(departmentId, userName: nameInput);
+
+    // Empty the name bar for the next ticket before navigating
+    _nameController.clear();
+
+    final isCafe = departmentId == Departments.cafeId;
+    final cardColor = isCafe ? Colors.amber.shade700 : Colors.indigo.shade600;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle, color: Colors.white),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Ticket ${newTicket.ticketCode} generated for ${newTicket.userName}!',
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: cardColor,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -60,24 +130,103 @@ class _SelectDepartmentView extends StatelessWidget {
       children: [
         const SizedBox(height: 8),
         Text(
-          'Select Department',
+          'Get Your Ticket',
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
         ),
         const SizedBox(height: 6),
         Text(
-          'Tap a department below to generate your virtual ticket.',
+          'Enter user name below and select a department to join the queue.',
           style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
         ),
+        const SizedBox(height: 20),
+
+        // Name Bar Input Field (Required)
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.grey.shade300),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.03),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.badge_outlined,
+                      size: 20, color: Theme.of(context).colorScheme.primary),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'User Name',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  const Text(
+                    '*',
+                    style: TextStyle(
+                      color: Colors.red,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: _nameController,
+                decoration: InputDecoration(
+                  hintText: 'Enter full name (Required)',
+                  prefixIcon: const Icon(Icons.person_outline),
+                  filled: true,
+                  fillColor: Colors.grey.shade50,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+
         const SizedBox(height: 24),
 
-        // Display exactly the two departments: Café and Administration Office
+        Text(
+          'Select Department',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Colors.grey.shade800,
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        // Display departments: Café and Administration Office
         ...Departments.all.map((dept) {
           final isCafe = dept.id == Departments.cafeId;
           final waiting =
               context.watch<QueueService>().departmentWaitingCount(dept.id);
-          final cardColor = isCafe ? Colors.amber.shade700 : Colors.indigo.shade600;
+          final cardColor =
+              isCafe ? Colors.amber.shade700 : Colors.indigo.shade600;
 
           return AnimatedContainer(
             duration: const Duration(milliseconds: 250),
@@ -88,31 +237,7 @@ class _SelectDepartmentView extends StatelessWidget {
                 borderRadius: BorderRadius.circular(16),
               ),
               child: InkWell(
-                onTap: () {
-                  final service = context.read<QueueService>();
-                  final newTicket = service.joinQueue(dept.id);
-
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Row(
-                        children: [
-                          const Icon(Icons.check_circle, color: Colors.white),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              'Ticket ${newTicket.ticketCode} generated for ${dept.name}!',
-                            ),
-                          ),
-                        ],
-                      ),
-                      backgroundColor: cardColor,
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                  );
-                },
+                onTap: () => _generateTicket(dept.id),
                 borderRadius: BorderRadius.circular(16),
                 child: Padding(
                   padding: const EdgeInsets.all(20),
@@ -125,7 +250,9 @@ class _SelectDepartmentView extends StatelessWidget {
                           borderRadius: BorderRadius.circular(14),
                         ),
                         child: Icon(
-                          isCafe ? Icons.local_cafe_rounded : Icons.account_balance_rounded,
+                          isCafe
+                              ? Icons.local_cafe_rounded
+                              : Icons.account_balance_rounded,
                           color: cardColor,
                           size: 32,
                         ),
@@ -194,7 +321,7 @@ class _SelectDepartmentView extends StatelessWidget {
   }
 }
 
-/// Active Ticket View - Displays current ticket, queue position, live timer, and status
+/// Active Ticket View - Displays current ticket (Appears ONLY after a ticket is generated)
 class _ActiveTicketView extends StatelessWidget {
   final Ticket ticket;
 
@@ -208,14 +335,87 @@ class _ActiveTicketView extends StatelessWidget {
     final isNext = ahead == 0;
 
     final isCafe = ticket.departmentId == Departments.cafeId;
-    final primaryColor = isCafe ? Colors.amber.shade800 : Colors.indigo.shade700;
+    final primaryColor =
+        isCafe ? Colors.amber.shade800 : Colors.indigo.shade700;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const SizedBox(height: 10),
+          // Top Action Options Bar (Only appears on Active Ticket Page!)
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.grey.shade300),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                // Option 1: Get New Ticket
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      context.read<QueueService>().clearUserTicketView();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Enter a name and select a department to issue another ticket.',
+                          ),
+                          duration: Duration(seconds: 2),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.add_card_rounded, size: 18),
+                    label: const Text('Get New Ticket'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: primaryColor,
+                      side: BorderSide(color: primaryColor.withOpacity(0.5)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                // Option 2: Return to Homepage
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).pushAndRemoveUntil(
+                        MaterialPageRoute(
+                          builder: (_) => const LoginScreen(),
+                        ),
+                        (route) => false,
+                      );
+                    },
+                    icon: const Icon(Icons.home_rounded, size: 18),
+                    label: const Text('Return to Home'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF1E3A8A),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 18),
+
           // Ticket Card Container
           AnimatedContainer(
             duration: const Duration(milliseconds: 300),
@@ -244,7 +444,9 @@ class _ActiveTicketView extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(
-                      isCafe ? Icons.local_cafe_rounded : Icons.account_balance_rounded,
+                      isCafe
+                          ? Icons.local_cafe_rounded
+                          : Icons.account_balance_rounded,
                       color: Colors.white,
                       size: 20,
                     ),
@@ -283,6 +485,34 @@ class _ActiveTicketView extends StatelessWidget {
                       fontWeight: FontWeight.w900,
                       letterSpacing: 2,
                     ),
+                  ),
+                ),
+
+                const SizedBox(height: 10),
+
+                // User Name Tag on Active Ticket
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.person_rounded,
+                          size: 16, color: Colors.white),
+                      const SizedBox(width: 6),
+                      Text(
+                        ticket.userName,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
 
@@ -349,7 +579,9 @@ class _ActiveTicketView extends StatelessWidget {
               child: Row(
                 children: [
                   Icon(
-                    isNext ? Icons.notifications_active_rounded : Icons.info_outline_rounded,
+                    isNext
+                        ? Icons.notifications_active_rounded
+                        : Icons.info_outline_rounded,
                     color: isNext ? Colors.green.shade700 : Colors.blue.shade700,
                     size: 28,
                   ),
@@ -363,17 +595,21 @@ class _ActiveTicketView extends StatelessWidget {
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 15,
-                            color: isNext ? Colors.green.shade900 : Colors.blue.shade900,
+                            color: isNext
+                                ? Colors.green.shade900
+                                : Colors.blue.shade900,
                           ),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           isNext
-                              ? 'Please move close to the counter and get ready.'
-                              : 'Keep this screen open. We will notify you when called.',
+                              ? '${ticket.userName}, please move close to the counter.'
+                              : 'Keep this screen open. We will call ${ticket.userName} when ready.',
                           style: TextStyle(
                             fontSize: 12,
-                            color: isNext ? Colors.green.shade800 : Colors.blue.shade800,
+                            color: isNext
+                                ? Colors.green.shade800
+                                : Colors.blue.shade800,
                           ),
                         ),
                       ],
@@ -384,7 +620,7 @@ class _ActiveTicketView extends StatelessWidget {
             ),
           ),
 
-          const SizedBox(height: 36),
+          const SizedBox(height: 24),
 
           // Cancel Ticket Button
           OutlinedButton.icon(
@@ -402,7 +638,8 @@ class _ActiveTicketView extends StatelessWidget {
                       child: const Text('Keep Waiting'),
                     ),
                     FilledButton(
-                      style: FilledButton.styleFrom(backgroundColor: Colors.red),
+                      style:
+                          FilledButton.styleFrom(backgroundColor: Colors.red),
                       onPressed: () {
                         context.read<QueueService>().cancelTicket(ticket);
                         Navigator.pop(ctx);

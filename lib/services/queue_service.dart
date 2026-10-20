@@ -7,7 +7,7 @@ class QueueService extends ChangeNotifier {
   final Map<String, List<Ticket>> _queues = {};
   final Map<String, int> _counters = {}; // Ticket counter per department
 
-  // Currently generated active user ticket (single active ticket prototype)
+  // Currently generated active user ticket
   Ticket? currentUserTicket;
 
   QueueService() {
@@ -59,14 +59,14 @@ class QueueService extends ChangeNotifier {
 
   // --- User Operations ---
 
-  /// User generates a ticket for a selected department
-  Ticket joinQueue(String departmentId) {
+  /// User generates a ticket for a selected department with their name
+  Ticket joinQueue(String departmentId, {String userName = 'Guest'}) {
     final dept = Departments.byId(departmentId);
     if (dept == null) {
       throw Exception('Invalid department selected');
     }
 
-    // If user already has an active waiting ticket, return it
+    // If user already has an active waiting ticket and hasn't requested a new ticket, return it
     if (currentUserTicket != null &&
         currentUserTicket!.status == TicketStatus.waiting) {
       return currentUserTicket!;
@@ -75,11 +75,14 @@ class QueueService extends ChangeNotifier {
     final number = _counters[departmentId]!;
     _counters[departmentId] = number + 1;
 
+    final cleanName = userName.trim().isEmpty ? 'Guest' : userName.trim();
+
     final ticket = Ticket(
       id: '${departmentId}_${number}_${DateTime.now().millisecondsSinceEpoch}',
       number: number,
       departmentId: departmentId,
       departmentName: dept.name,
+      userName: cleanName,
       joinedAt: DateTime.now(),
     );
 
@@ -87,6 +90,12 @@ class QueueService extends ChangeNotifier {
     currentUserTicket = ticket;
     notifyListeners();
     return ticket;
+  }
+
+  /// Resets the user's active ticket view so a new ticket can be generated for another user/department
+  void clearUserTicketView() {
+    currentUserTicket = null;
+    notifyListeners();
   }
 
   /// User cancels their ticket

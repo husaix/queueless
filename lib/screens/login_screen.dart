@@ -129,7 +129,7 @@ class _LoginScreenState extends State<LoginScreen>
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'Smart Virtual Queue Management System',
+                      'Virtual Queue Management',
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.white.withOpacity(0.8),
@@ -187,7 +187,7 @@ class _LoginScreenState extends State<LoginScreen>
 
                     const Spacer(),
                     Text(
-                      'University Queue System Prototype',
+                      'University Queue System',
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.white.withOpacity(0.5),

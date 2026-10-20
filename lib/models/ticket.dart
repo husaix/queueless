@@ -5,6 +5,7 @@ class Ticket {
   final int number;
   final String departmentId;
   final String departmentName;
+  final String userName;
   final DateTime joinedAt;
   TicketStatus status;
   DateTime? calledAt;
@@ -15,6 +16,7 @@ class Ticket {
     required this.number,
     required this.departmentId,
     required this.departmentName,
+    required this.userName,
     required this.joinedAt,
     this.status = TicketStatus.waiting,
     this.calledAt,
