@@ -2,26 +2,24 @@ import 'package:flutter/foundation.dart';
 import '../models/ticket.dart';
 import '../models/department.dart';
 
-/// Simple in-memory queue manager for the prototype.
-/// Later this will be replaced by Firebase / backend.
+/// Simple in-memory queue manager for storing and updating tickets.
 class QueueService extends ChangeNotifier {
   final Map<String, List<Ticket>> _queues = {};
-  final Map<String, int> _counters = {}; // next ticket number per dept
-  final Map<String, int> _servedCount = {}; // for admin performance
-  final Map<String, Duration> _totalServiceTime = {}; // for avg speed
+  final Map<String, int> _counters = {}; // Ticket counter per department
 
-  // Currently logged-in user's ticket (simple single-user prototype)
+  // Currently generated active user ticket (single active ticket prototype)
   Ticket? currentUserTicket;
 
   QueueService() {
-    for (final d in Departments.all) {
-      _queues[d.id] = [];
-      _counters[d.id] = 1;
-      _servedCount[d.id] = 0;
-      _totalServiceTime[d.id] = Duration.zero;
+    for (final dept in Departments.all) {
+      _queues[dept.id] = [];
+      _counters[dept.id] = 101; // Start ticket numbering at 101
     }
   }
 
+  // --- Queue Queries for Management & User ---
+
+  /// Waiting tickets in a specific department
   List<Ticket> waitingTickets(String departmentId) {
     return List.unmodifiable(
       (_queues[departmentId] ?? [])
@@ -30,31 +28,45 @@ class QueueService extends ChangeNotifier {
     );
   }
 
+  /// Currently called tickets in a specific department
+  List<Ticket> calledTickets(String departmentId) {
+    return List.unmodifiable(
+      (_queues[departmentId] ?? [])
+          .where((t) => t.status == TicketStatus.called)
+          .toList(),
+    );
+  }
+
+  /// All tickets in a specific department
   List<Ticket> allTickets(String departmentId) {
     return List.unmodifiable(_queues[departmentId] ?? []);
   }
 
+  /// Number of people waiting ahead of a given ticket
   int peopleAhead(Ticket ticket) {
     final waiting = waitingTickets(ticket.departmentId);
-    final idx = waiting.indexWhere((t) => t.id == ticket.id);
-    return idx < 0 ? 0 : idx;
+    final index = waiting.indexWhere((t) => t.id == ticket.id);
+    return index < 0 ? 0 : index;
   }
 
+  /// Estimated wait time in minutes based on position and department average
   int estimatedWaitMinutes(Ticket ticket) {
     final dept = Departments.byId(ticket.departmentId);
     final ahead = peopleAhead(ticket);
-    final avg = dept?.avgServiceMinutes ?? 5;
+    final avg = dept?.avgServiceMinutes ?? 4;
     return (ahead + 1) * avg;
   }
 
-  /// User joins a queue
+  // --- User Operations ---
+
+  /// User generates a ticket for a selected department
   Ticket joinQueue(String departmentId) {
     final dept = Departments.byId(departmentId);
     if (dept == null) {
-      throw Exception('Unknown department');
+      throw Exception('Invalid department selected');
     }
 
-    // If user already has a waiting ticket, return it
+    // If user already has an active waiting ticket, return it
     if (currentUserTicket != null &&
         currentUserTicket!.status == TicketStatus.waiting) {
       return currentUserTicket!;
@@ -77,6 +89,7 @@ class QueueService extends ChangeNotifier {
     return ticket;
   }
 
+  /// User cancels their ticket
   void cancelTicket(Ticket ticket) {
     if (ticket.status != TicketStatus.waiting) return;
     ticket.status = TicketStatus.cancelled;
@@ -86,7 +99,9 @@ class QueueService extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Staff: call the next waiting ticket
+  // --- Management Operations ---
+
+  /// Staff calls the next waiting ticket in their department
   Ticket? callNext(String departmentId) {
     final waiting = waitingTickets(departmentId);
     if (waiting.isEmpty) return null;
@@ -98,7 +113,7 @@ class QueueService extends ChangeNotifier {
     return next;
   }
 
-  /// Staff: mark as served
+  /// Staff marks a called ticket as served/completed
   void markServed(Ticket ticket) {
     if (ticket.status != TicketStatus.called &&
         ticket.status != TicketStatus.waiting) return;
@@ -106,22 +121,17 @@ class QueueService extends ChangeNotifier {
     ticket.status = TicketStatus.served;
     ticket.servedAt = DateTime.now();
 
-    final serviceTime = ticket.servedAt!.difference(ticket.joinedAt);
-    _servedCount[ticket.departmentId] =
-        (_servedCount[ticket.departmentId] ?? 0) + 1;
-    _totalServiceTime[ticket.departmentId] =
-        (_totalServiceTime[ticket.departmentId] ?? Duration.zero) + serviceTime;
-
     if (currentUserTicket?.id == ticket.id) {
       currentUserTicket = null;
     }
     notifyListeners();
   }
 
-  /// Staff: skip a ticket
+  /// Staff skips a ticket
   void skipTicket(Ticket ticket) {
     if (ticket.status != TicketStatus.waiting &&
         ticket.status != TicketStatus.called) return;
+
     ticket.status = TicketStatus.skipped;
     if (currentUserTicket?.id == ticket.id) {
       currentUserTicket = null;
@@ -129,16 +139,47 @@ class QueueService extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ----- Admin performance helpers -----
-  int servedToday(String departmentId) => _servedCount[departmentId] ?? 0;
+  // --- Read-Only Admin Statistics ---
 
-  double averageServiceMinutes(String departmentId) {
-    final count = _servedCount[departmentId] ?? 0;
-    if (count == 0) return 0;
-    final total = _totalServiceTime[departmentId] ?? Duration.zero;
-    return total.inSeconds / 60.0 / count;
+  /// Total tickets generated across all departments
+  int get totalTicketsGenerated {
+    return _queues.values.fold(0, (sum, list) => sum + list.length);
   }
 
-  int currentWaitingCount(String departmentId) =>
-      waitingTickets(departmentId).length;
+  /// Total tickets generated for a specific department
+  int departmentTotalTickets(String departmentId) {
+    return _queues[departmentId]?.length ?? 0;
+  }
+
+  /// Current waiting tickets count for a department
+  int departmentWaitingCount(String departmentId) {
+    return waitingTickets(departmentId).length;
+  }
+
+  /// Current called tickets count for a department
+  int departmentCalledCount(String departmentId) {
+    return calledTickets(departmentId).length;
+  }
+
+  /// Served/completed tickets count for a department
+  int departmentServedCount(String departmentId) {
+    return (_queues[departmentId] ?? [])
+        .where((t) => t.status == TicketStatus.served)
+        .length;
+  }
+
+  /// Total currently waiting tickets across all departments
+  int get totalWaitingCount {
+    return _queues.keys.fold(0, (sum, id) => sum + departmentWaitingCount(id));
+  }
+
+  /// Total called & served (completed) tickets across all departments
+  int get totalCompletedCount {
+    return _queues.values.fold(
+      0,
+      (sum, list) =>
+          sum +
+          list.where((t) => t.status == TicketStatus.served || t.status == TicketStatus.called).length,
+    );
+  }
 }

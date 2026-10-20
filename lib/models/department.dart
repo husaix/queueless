@@ -2,7 +2,7 @@ class Department {
   final String id;
   final String name;
   final String description;
-  final int avgServiceMinutes; // for estimated wait
+  final int avgServiceMinutes;
 
   const Department({
     required this.id,
@@ -12,38 +12,23 @@ class Department {
   });
 }
 
-/// Predefined departments for the prototype (no backend yet)
+/// Predefined departments - restricted to exactly two departments as required.
 class Departments {
+  static const String cafeId = 'cafe';
+  static const String adminOfficeId = 'admin_office';
+
   static const List<Department> all = [
     Department(
-      id: 'student_affairs',
-      name: 'Student Affairs',
-      description: 'Registration, certificates & general student services',
-      avgServiceMinutes: 4,
-    ),
-    Department(
-      id: 'canteen',
-      name: 'Canteen',
-      description: 'Order & collect food',
+      id: cafeId,
+      name: 'Café',
+      description: 'Order food, coffee, beverages & snacks',
       avgServiceMinutes: 3,
     ),
     Department(
-      id: 'library',
-      name: 'Library Desk',
-      description: 'Book issue / return & inquiries',
-      avgServiceMinutes: 2,
-    ),
-    Department(
-      id: 'clinic',
-      name: 'Campus Clinic',
-      description: 'Medical consultation & first aid',
-      avgServiceMinutes: 8,
-    ),
-    Department(
-      id: 'admin_office',
-      name: 'Admin Office',
-      description: 'Official documents & approvals',
-      avgServiceMinutes: 6,
+      id: adminOfficeId,
+      name: 'Administration Office',
+      description: 'Student records, certificates & official approvals',
+      avgServiceMinutes: 5,
     ),
   ];
 
