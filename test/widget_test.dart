@@ -5,26 +5,28 @@
 // gestures. You can also use WidgetTester to find child widgets in the widget
 // tree, read text, and verify that the values of widget properties are correct.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:queueless/models/ticket.dart';
 
 import 'package:queueless/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  Ticket makeTicket(String deptId, int number) => Ticket(
+    id: 't$number',
+    number: number,
+    departmentId: deptId,
+    departmentName: 'Test',
+    userName: 'John',
+    joinedAt: DateTime.now(),
+  );
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+  test('Café tickets use the C prefix', () {
+    expect(makeTicket('cafe', 101).ticketCode, 'C-101');
+  });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+  test('Admin Office tickets use the A prefix', () {
+    expect(makeTicket('admin_office', 101).ticketCode, 'A-101');
   });
 }
+
+
